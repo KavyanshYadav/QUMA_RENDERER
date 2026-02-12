@@ -16,6 +16,7 @@
 #include <backends/imgui_impl_opengl3.h>
 #include <backends/imgui_impl_sdl2.h>
 
+#include <array>
 #include <cstdint>
 #include <exception>
 #include <iostream>
@@ -24,6 +25,7 @@
 #include <string>
 
 #include "CameraController.hpp"
+#include "EngineInstanceManager.hpp"
 #include "MeshRenderEngine.hpp"
 #include "ObjLoader.hpp"
 #include "SampleAssets.hpp"
@@ -51,7 +53,7 @@ constexpr engine::modules::Version kEngineApiVersion{0, 1, 0};
   return engine::modules::ModuleDescriptor{
       .id = "sample.mesh_engine",
       .category = "sample",
-      .moduleVersion = {0, 4, 0},
+      .moduleVersion = {0, 5, 0},
       .requiredApiVersion = kEngineApiVersion,
       .swapPolicy = engine::modules::SwapPolicy::RuntimeSwappable,
       .dependencies = {},
@@ -63,7 +65,6 @@ void drawStaticLeftPanel(const float panelWidth,
                          const std::optional<std::uint32_t> hoveredMesh,
                          const std::optional<std::uint32_t> selectedMesh,
                          rendering::SceneLighting& lighting,
-                         rendering::PbrMaterial& backpackMaterial,
                          float (&clearColor)[3]) {
   const ImGuiViewport* viewport = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(viewport->Pos);
@@ -74,28 +75,15 @@ void drawStaticLeftPanel(const float panelWidth,
   ImGui::Text("Renderer UI (Docked Left)");
   ImGui::Separator();
   ImGui::Text("Triangles: %u", renderer.totalTriangles());
-  ImGui::Text("Hovered Mesh: %s", hoveredMesh.has_value() ? "yes" : "none");
-  ImGui::Text("Selected Mesh: %s", selectedMesh.has_value() ? "yes" : "none");
+  ImGui::Text("Hovered Mesh Id: %d", hoveredMesh.has_value() ? static_cast<int>(hoveredMesh.value()) : -1);
+  ImGui::Text("Selected Mesh Id: %d", selectedMesh.has_value() ? static_cast<int>(selectedMesh.value()) : -1);
   ImGui::Separator();
 
   if (ImGui::TreeNode("Scene")) {
-    if (ImGui::TreeNode("Meshes")) {
-      ImGui::BulletText("backpack.obj");
-      ImGui::TreePop();
-    }
-
     if (ImGui::TreeNode("Lighting")) {
       ImGui::SliderFloat3("Light Position", lighting.lightPosition, -10.0f, 10.0f);
       ImGui::ColorEdit3("Light Color", lighting.lightColor);
       ImGui::SliderFloat("Ambient", &lighting.ambientIntensity, 0.0f, 1.0f);
-      ImGui::TreePop();
-    }
-
-    if (ImGui::TreeNode("Material")) {
-      ImGui::ColorEdit3("Base Color", backpackMaterial.baseColor);
-      ImGui::SliderFloat("Metallic", &backpackMaterial.metallic, 0.0f, 1.0f);
-      ImGui::SliderFloat("Roughness", &backpackMaterial.roughness, 0.04f, 1.0f);
-      ImGui::SliderFloat("AO", &backpackMaterial.ambientOcclusion, 0.0f, 1.0f);
       ImGui::ColorEdit3("Background", clearColor);
       ImGui::TreePop();
     }
@@ -104,7 +92,84 @@ void drawStaticLeftPanel(const float panelWidth,
   }
 
   ImGui::Separator();
-  ImGui::TextWrapped("Controls: RMB + Mouse look, WASD move, LMB select looked-at mesh.");
+  ImGui::TextWrapped("Controls: RMB + Mouse look, WASD move, LMB select mesh.");
+  ImGui::End();
+}
+
+void drawWindowManager(EngineInstanceManager& instanceManager, engine::modules::ModuleManager& moduleManager) {
+  ImGui::Begin("Window Manager");
+  ImGui::Text("Engine Instance Manager");
+  ImGui::Text("Running Instances: %u", instanceManager.totalRunningInstances());
+  ImGui::Separator();
+
+  static int selectedConfig = 0;
+  static int selectedProfile = 0;
+  static int instanceNameCounter = 1;
+  static constexpr std::array<const char*, 3> configs{"Debug", "Release", "Custom"};
+  static constexpr std::array<const char*, 3> profiles{"Editor", "Game", "Tools"};
+
+  ImGui::Combo("New Instance Config", &selectedConfig, configs.data(), static_cast<int>(configs.size()));
+  ImGui::Combo("New Instance Profile", &selectedProfile, profiles.data(), static_cast<int>(profiles.size()));
+  if (ImGui::Button("Create Instance")) {
+    instanceManager.createInstance("instance_" + std::to_string(instanceNameCounter++), configs[static_cast<std::size_t>(selectedConfig)], profiles[static_cast<std::size_t>(selectedProfile)]);
+  }
+
+  ImGui::Separator();
+  if (ImGui::TreeNode("Instances")) {
+    for (auto& instance : instanceManager.instances()) {
+      const std::string nodeTitle = instance.summary.name + "##" + std::to_string(instance.summary.instanceId);
+      if (ImGui::TreeNode(nodeTitle.c_str())) {
+        ImGui::Text("Id: %u", instance.summary.instanceId);
+        ImGui::Text("Config: %s", instance.summary.config.c_str());
+        ImGui::Text("Profile: %s", instance.summary.profile.c_str());
+        ImGui::Text("Status: %s", instance.summary.running ? "running" : "stopped");
+
+        if (ImGui::TreeNode("Modules")) {
+          std::vector<engine::modules::ModuleDescriptor> descriptors;
+          descriptors.reserve(instance.modules.size());
+          for (const auto& module : instance.modules) {
+            descriptors.push_back(module.descriptor);
+          }
+          const auto validation = moduleManager.validate(descriptors);
+          if (!validation.ok) {
+            ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "Validation has %d issue(s)", static_cast<int>(validation.errors.size()));
+          }
+
+          for (auto& module : instance.modules) {
+            const std::string moduleNode = module.descriptor.id + "##module_" + std::to_string(instance.summary.instanceId);
+            if (ImGui::TreeNode(moduleNode.c_str())) {
+              ImGui::Text("Category: %s", module.descriptor.category.c_str());
+              ImGui::Text("Version: %u.%u.%u",
+                          module.descriptor.moduleVersion.major,
+                          module.descriptor.moduleVersion.minor,
+                          module.descriptor.moduleVersion.patch);
+              ImGui::Text("Swap: %s", moduleManager.canHotSwap(module.descriptor) ? "runtime swappable" : "locked");
+              ImGui::Text("HotSwap Generation: %u", module.hotSwapGeneration);
+              ImGui::Checkbox(("Enabled##" + moduleNode).c_str(), &module.enabled);
+
+              if (moduleManager.canHotSwap(module.descriptor)) {
+                if (ImGui::Button(("Hot Replace##" + moduleNode).c_str())) {
+                  ++module.hotSwapGeneration;
+                  ++module.descriptor.moduleVersion.patch;
+                }
+              } else {
+                ImGui::BeginDisabled();
+                ImGui::Button(("Hot Replace##" + moduleNode).c_str());
+                ImGui::EndDisabled();
+              }
+
+              ImGui::TreePop();
+            }
+          }
+          ImGui::TreePop();
+        }
+
+        ImGui::TreePop();
+      }
+    }
+    ImGui::TreePop();
+  }
+
   ImGui::End();
 }
 
@@ -136,7 +201,7 @@ int runSampleApp() {
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
     const auto windowId = windowSystem.createWindow(engine::platform::WindowCreateInfo{
-        .title = "QumaRenderer - Mesh Engine (WASD + Pick + Static UI)", .size = {1280, 720}, .resizable = true, .highDpi = true});
+        .title = "QumaRenderer - Engine Instance Manager", .size = {1440, 840}, .resizable = true, .highDpi = true});
 
     auto* sdlWindow = static_cast<SDL_Window*>(windowSystem.nativeWindowHandle(windowId));
     if (sdlWindow == nullptr) {
@@ -171,19 +236,16 @@ int runSampleApp() {
     ImGui_ImplOpenGL3_Init("#version 330");
 
     rendering::MeshRenderEngine renderer{sdlWindow};
-    auto backpackMesh = rendering::loadObjFromString(backpackObjSource());
-    backpackMesh.material.name = "backpack_material";
-    backpackMesh.material.baseColor[0] = 0.45f;
-    backpackMesh.material.baseColor[1] = 0.62f;
-    backpackMesh.material.baseColor[2] = 0.30f;
-    backpackMesh.material.metallic = 0.1f;
-    backpackMesh.material.roughness = 0.68f;
+    auto baseMesh = rendering::loadObjFromString(backpackObjSource());
+    baseMesh.material.name = "backpack_material";
+    baseMesh.material.baseColor[0] = 0.45f;
+    baseMesh.material.baseColor[1] = 0.62f;
+    baseMesh.material.baseColor[2] = 0.30f;
+    baseMesh.material.metallic = 0.1f;
+    baseMesh.material.roughness = 0.68f;
 
-    const std::uint32_t backpackMeshId = renderer.addMeshInstance(rendering::MeshRenderEngine::MeshInstanceCreateInfo{
-        .mesh = backpackMesh,
-        .position = {0.0f, 0.0f, 0.0f},
-        .rotationYRadians = 0.0f,
-        .scale = 1.0f});
+    EngineInstanceManager instanceManager{renderer, baseMesh, kEngineApiVersion};
+    instanceManager.createInstance("instance_1", "Debug", "Editor");
 
     rendering::SceneLighting lighting{};
     CameraController cameraController{};
@@ -232,7 +294,6 @@ int runSampleApp() {
 
       const auto lookedAt = renderer.findLookedAtMesh(cameraController.camera());
       renderer.setHoveredMesh(lookedAt);
-      renderer.updateMeshMaterial(backpackMeshId, backpackMesh.material);
 
       int w = 0;
       int h = 0;
@@ -241,7 +302,8 @@ int runSampleApp() {
       renderer.beginFrame(clearColor[0], clearColor[1], clearColor[2]);
       renderer.renderScene(cameraController.camera(), lighting);
 
-      drawStaticLeftPanel(340.0f, renderer, lookedAt, selectedMesh, lighting, backpackMesh.material, clearColor);
+      drawStaticLeftPanel(340.0f, renderer, lookedAt, selectedMesh, lighting, clearColor);
+      drawWindowManager(instanceManager, moduleManager);
 
       ImGui::Render();
       ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

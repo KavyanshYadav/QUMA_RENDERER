@@ -23,6 +23,7 @@ if(ENGINE_SAMPLES_SDL2_TARGET AND OpenGL_FOUND AND ENGINE_GLAD_TARGET AND ENGINE
     ${CMAKE_CURRENT_SOURCE_DIR}/opengl_triangle/main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/opengl_triangle/SampleApp.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/opengl_triangle/CameraController.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/opengl_triangle/EngineInstanceManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/opengl_triangle/MeshRenderEngine.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/opengl_triangle/ObjLoader.cpp
     ${ENGINE_IMGUI_ROOT_DIR}/backends/imgui_impl_sdl2.cpp
