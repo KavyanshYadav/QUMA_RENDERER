@@ -291,8 +291,8 @@ void main() {
   vec3 specular = spec * f0 * uLightColor;
 
   vec3 lit = (ambient + diffuse + specular) * uBaseColor;
-  vec3 hoveredTint = mix(lit, vec3(1.0, 0.8, 0.1), uHighlight * 0.35);
-  vec3 selectedTint = mix(hoveredTint, vec3(0.2, 1.0, 0.3), uSelected * 0.40);
+  vec3 hoveredTint = mix(lit, vec3(1.0, 0.82, 0.05), uHighlight * 0.55);
+  vec3 selectedTint = mix(hoveredTint, vec3(1.0, 0.25, 1.0), uSelected * 0.82);
   outColor = vec4(selectedTint, 1.0);
 }
 )";
@@ -444,6 +444,32 @@ void MeshRenderEngine::setHoveredMesh(const std::optional<std::uint32_t> meshId)
 
 void MeshRenderEngine::setSelectedMesh(const std::optional<std::uint32_t> meshId) {
   selectedMeshId_ = meshId;
+}
+
+std::optional<MeshRenderEngine::MeshTransform> MeshRenderEngine::meshTransform(const std::uint32_t meshId) const {
+  const auto it = std::find_if(meshes_.begin(), meshes_.end(), [meshId](const GpuMesh& mesh) { return mesh.id == meshId; });
+  if (it == meshes_.end()) {
+    return std::nullopt;
+  }
+
+  MeshTransform transform{};
+  transform.position[0] = it->position.x;
+  transform.position[1] = it->position.y;
+  transform.position[2] = it->position.z;
+  transform.rotationYRadians = it->rotationYRadians;
+  transform.scale = it->scale;
+  return transform;
+}
+
+void MeshRenderEngine::setMeshTransform(const std::uint32_t meshId, const MeshTransform& transform) {
+  auto it = std::find_if(meshes_.begin(), meshes_.end(), [meshId](const GpuMesh& mesh) { return mesh.id == meshId; });
+  if (it == meshes_.end()) {
+    return;
+  }
+
+  it->position = {transform.position[0], transform.position[1], transform.position[2]};
+  it->rotationYRadians = transform.rotationYRadians;
+  it->scale = transform.scale;
 }
 
 void MeshRenderEngine::resize(const int drawableWidth, const int drawableHeight) const {

@@ -62,12 +62,19 @@ EngineInstanceManager::EngineInstanceManager(rendering::MeshRenderEngine& render
       baseMesh_(baseMesh),
       apiVersion_(apiVersion) {}
 
-void EngineInstanceManager::createInstance(std::string name, std::string config, std::string profile) {
-  rendering::MeshData mesh = baseMesh_;
+std::uint32_t EngineInstanceManager::createInstance(std::string name, std::string config, std::string profile) {
+  return createInstanceWithMesh(std::move(name), std::move(config), std::move(profile), baseMesh_);
+}
+
+std::uint32_t EngineInstanceManager::createInstanceWithMesh(std::string name,
+                                                            std::string config,
+                                                            std::string profile,
+                                                            const rendering::MeshData& meshTemplate) {
+  rendering::MeshData mesh = meshTemplate;
   const auto tint = profileTint(profile);
-  mesh.material.baseColor[0] = tint[0];
-  mesh.material.baseColor[1] = tint[1];
-  mesh.material.baseColor[2] = tint[2];
+  mesh.material.baseColor[0] = (mesh.material.baseColor[0] + tint[0]) * 0.5f;
+  mesh.material.baseColor[1] = (mesh.material.baseColor[1] + tint[1]) * 0.5f;
+  mesh.material.baseColor[2] = (mesh.material.baseColor[2] + tint[2]) * 0.5f;
 
   const float offsetX = static_cast<float>(instances_.size()) * 2.3f;
   const std::uint32_t meshId = renderer_.addMeshInstance(rendering::MeshRenderEngine::MeshInstanceCreateInfo{
@@ -87,6 +94,7 @@ void EngineInstanceManager::createInstance(std::string name, std::string config,
   runtime.modules = defaultModules(apiVersion_);
 
   instances_.push_back(std::move(runtime));
+  return meshId;
 }
 
 std::vector<EngineInstanceManager::EngineInstanceRuntime>& EngineInstanceManager::instances() {
@@ -95,6 +103,24 @@ std::vector<EngineInstanceManager::EngineInstanceRuntime>& EngineInstanceManager
 
 const std::vector<EngineInstanceManager::EngineInstanceRuntime>& EngineInstanceManager::instances() const {
   return instances_;
+}
+
+EngineInstanceManager::EngineInstanceRuntime* EngineInstanceManager::findByMeshId(const std::uint32_t meshId) {
+  for (auto& instance : instances_) {
+    if (instance.meshId == meshId) {
+      return &instance;
+    }
+  }
+  return nullptr;
+}
+
+const EngineInstanceManager::EngineInstanceRuntime* EngineInstanceManager::findByMeshId(const std::uint32_t meshId) const {
+  for (const auto& instance : instances_) {
+    if (instance.meshId == meshId) {
+      return &instance;
+    }
+  }
+  return nullptr;
 }
 
 std::uint32_t EngineInstanceManager::totalRunningInstances() const {

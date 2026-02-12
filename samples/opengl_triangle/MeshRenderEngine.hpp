@@ -34,6 +34,12 @@ public:
     float scale = 1.0f;
   };
 
+  struct MeshTransform {
+    float position[3]{0.0f, 0.0f, 0.0f};
+    float rotationYRadians = 0.0f;
+    float scale = 1.0f;
+  };
+
   explicit MeshRenderEngine(SDL_Window* window);
   ~MeshRenderEngine();
 
@@ -48,6 +54,9 @@ public:
 
   void setHoveredMesh(std::optional<std::uint32_t> meshId);
   void setSelectedMesh(std::optional<std::uint32_t> meshId);
+
+  [[nodiscard]] std::optional<MeshTransform> meshTransform(std::uint32_t meshId) const;
+  void setMeshTransform(std::uint32_t meshId, const MeshTransform& transform);
 
   void resize(int drawableWidth, int drawableHeight) const;
   void beginFrame(float clearR, float clearG, float clearB) const;

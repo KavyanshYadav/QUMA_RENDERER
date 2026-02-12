@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -36,9 +37,17 @@ public:
                         const rendering::MeshData& baseMesh,
                         const engine::modules::Version& apiVersion);
 
-  void createInstance(std::string name, std::string config, std::string profile);
+  std::uint32_t createInstance(std::string name, std::string config, std::string profile);
+  std::uint32_t createInstanceWithMesh(std::string name,
+                                       std::string config,
+                                       std::string profile,
+                                       const rendering::MeshData& meshTemplate);
+
   [[nodiscard]] std::vector<EngineInstanceRuntime>& instances();
   [[nodiscard]] const std::vector<EngineInstanceRuntime>& instances() const;
+
+  [[nodiscard]] EngineInstanceRuntime* findByMeshId(std::uint32_t meshId);
+  [[nodiscard]] const EngineInstanceRuntime* findByMeshId(std::uint32_t meshId) const;
 
   [[nodiscard]] std::uint32_t totalRunningInstances() const;
 
