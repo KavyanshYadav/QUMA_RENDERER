@@ -1,6 +1,8 @@
 #include "engine/render/opengl/OpenGlRenderBackend.hpp"
 
+#define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
+#include <GL/glext.h>
 
 #include <cstddef>
 #include <cstdint>
