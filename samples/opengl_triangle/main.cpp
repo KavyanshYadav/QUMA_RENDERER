@@ -1,3 +1,4 @@
+#define SDL_MAIN_HANDLED
 #include <SDL.h>
 
 #if __has_include(<glad/glad.h>)
@@ -10,9 +11,10 @@
 #error "GLAD headers not found. Provide third_party/glad or a glad package."
 #endif
 
-#include <imgui.h>
 #include <backends/imgui_impl_opengl3.h>
 #include <backends/imgui_impl_sdl2.h>
+#include <imgui.h>
+
 
 #include <array>
 #include <cmath>
@@ -39,14 +41,12 @@ struct Mat4 {
 
 [[nodiscard]] Mat4 identity() {
   Mat4 matrix{};
-  matrix.value = {1.0f, 0.0f, 0.0f, 0.0f,
-                  0.0f, 1.0f, 0.0f, 0.0f,
-                  0.0f, 0.0f, 1.0f, 0.0f,
-                  0.0f, 0.0f, 0.0f, 1.0f};
+  matrix.value = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+                  0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
   return matrix;
 }
 
-[[nodiscard]] Mat4 multiply(const Mat4& left, const Mat4& right) {
+[[nodiscard]] Mat4 multiply(const Mat4 &left, const Mat4 &right) {
   Mat4 out{};
   for (int row = 0; row < 4; ++row) {
     for (int col = 0; col < 4; ++col) {
@@ -60,13 +60,26 @@ struct Mat4 {
   return out;
 }
 
-[[nodiscard]] Mat4 perspective(const float fovRadians, const float aspectRatio, const float nearPlane, const float farPlane) {
+[[nodiscard]] Mat4 perspective(const float fovRadians, const float aspectRatio,
+                               const float nearPlane, const float farPlane) {
   Mat4 matrix{};
   const float tanHalf = std::tan(fovRadians * 0.5f);
-  matrix.value = {1.0f / (aspectRatio * tanHalf), 0.0f, 0.0f, 0.0f,
-                  0.0f, 1.0f / tanHalf, 0.0f, 0.0f,
-                  0.0f, 0.0f, -(farPlane + nearPlane) / (farPlane - nearPlane), -1.0f,
-                  0.0f, 0.0f, -(2.0f * farPlane * nearPlane) / (farPlane - nearPlane), 0.0f};
+  matrix.value = {1.0f / (aspectRatio * tanHalf),
+                  0.0f,
+                  0.0f,
+                  0.0f,
+                  0.0f,
+                  1.0f / tanHalf,
+                  0.0f,
+                  0.0f,
+                  0.0f,
+                  0.0f,
+                  -(farPlane + nearPlane) / (farPlane - nearPlane),
+                  -1.0f,
+                  0.0f,
+                  0.0f,
+                  -(2.0f * farPlane * nearPlane) / (farPlane - nearPlane),
+                  0.0f};
   return matrix;
 }
 
@@ -121,7 +134,7 @@ constexpr engine::modules::Version kEngineApiVersion{0, 1, 0};
       .conflicts = {}};
 }
 
-[[nodiscard]] GLuint compileShader(const GLenum type, const char* source) {
+[[nodiscard]] GLuint compileShader(const GLenum type, const char *source) {
   const GLuint shader = glCreateShader(type);
   glShaderSource(shader, 1, &source, nullptr);
   glCompileShader(shader);
@@ -140,7 +153,8 @@ constexpr engine::modules::Version kEngineApiVersion{0, 1, 0};
   return shader;
 }
 
-[[nodiscard]] GLuint createProgram(const char* vertexSource, const char* fragmentSource) {
+[[nodiscard]] GLuint createProgram(const char *vertexSource,
+                                   const char *fragmentSource) {
   const GLuint vertex = compileShader(GL_VERTEX_SHADER, vertexSource);
   const GLuint fragment = compileShader(GL_FRAGMENT_SHADER, fragmentSource);
 
@@ -174,7 +188,7 @@ int main() {
     auto moduleDescriptor = makeDemoModuleDescriptor();
     auto validation = moduleManager.validate({moduleDescriptor});
     if (!validation.ok) {
-      for (const auto& error : validation.errors) {
+      for (const auto &error : validation.errors) {
         std::cerr << "Module validation error: " << error << '\n';
       }
       return 1;
@@ -185,37 +199,47 @@ int main() {
     demoModule.onStart();
 
     auto platformBackend = engine::platform::createPlatformBackend();
-    auto& windowSystem = platformBackend->windowSystem();
+    auto &windowSystem = platformBackend->windowSystem();
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+                        SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-    const auto windowId = windowSystem.createWindow(engine::platform::WindowCreateInfo{
-        .title = "QumaRenderer - Rotating Lit Cube (SDL + OpenGL + ImGui)", .size = {1280, 720}, .resizable = true, .highDpi = true});
+    const auto windowId =
+        windowSystem.createWindow(engine::platform::WindowCreateInfo{
+            .title = "QumaRenderer - Rotating Lit Cube (SDL + OpenGL + ImGui)",
+            .size = {1280, 720},
+            .resizable = true,
+            .highDpi = true});
 
-    auto* sdlWindow = static_cast<SDL_Window*>(windowSystem.nativeWindowHandle(windowId));
+    auto *sdlWindow =
+        static_cast<SDL_Window *>(windowSystem.nativeWindowHandle(windowId));
     if (sdlWindow == nullptr) {
       throw std::runtime_error("Failed to retrieve native SDL window handle");
     }
 
     SDL_GLContext glContext = SDL_GL_CreateContext(sdlWindow);
     if (glContext == nullptr) {
-      throw std::runtime_error(std::string{"SDL_GL_CreateContext failed: "} + SDL_GetError());
+      throw std::runtime_error(std::string{"SDL_GL_CreateContext failed: "} +
+                               SDL_GetError());
     }
 
     if (SDL_GL_MakeCurrent(sdlWindow, glContext) != 0) {
-      throw std::runtime_error(std::string{"SDL_GL_MakeCurrent failed: "} + SDL_GetError());
+      throw std::runtime_error(std::string{"SDL_GL_MakeCurrent failed: "} +
+                               SDL_GetError());
     }
 
 #if ENGINE_GLAD_V1
-    if (gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress)) == 0) {
+    if (gladLoadGLLoader(
+            reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress)) == 0) {
       throw std::runtime_error("gladLoadGLLoader failed");
     }
 #else
-    if (gladLoadGL(reinterpret_cast<GLADloadfunc>(SDL_GL_GetProcAddress)) == 0) {
+    if (gladLoadGL(reinterpret_cast<GLADloadfunc>(SDL_GL_GetProcAddress)) ==
+        0) {
       throw std::runtime_error("gladLoadGL failed");
     }
 #endif
@@ -230,44 +254,34 @@ int main() {
     ImGui_ImplOpenGL3_Init("#version 330");
 
     static constexpr float cubeVertices[] = {
-        -1.0f, -1.0f, -1.0f, 0.0f,  0.0f,  -1.0f,
-        1.0f,  -1.0f, -1.0f, 0.0f,  0.0f,  -1.0f,
-        1.0f,  1.0f,  -1.0f, 0.0f,  0.0f,  -1.0f,
-        -1.0f, 1.0f,  -1.0f, 0.0f,  0.0f,  -1.0f,
+        -1.0f, -1.0f, -1.0f, 0.0f,  0.0f,  -1.0f, 1.0f,  -1.0f,
+        -1.0f, 0.0f,  0.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 0.0f,
+        0.0f,  -1.0f, -1.0f, 1.0f,  -1.0f, 0.0f,  0.0f,  -1.0f,
 
-        -1.0f, -1.0f, 1.0f,  0.0f,  0.0f,  1.0f,
-        1.0f,  -1.0f, 1.0f,  0.0f,  0.0f,  1.0f,
-        1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f,
-        -1.0f, 1.0f,  1.0f,  0.0f,  0.0f,  1.0f,
+        -1.0f, -1.0f, 1.0f,  0.0f,  0.0f,  1.0f,  1.0f,  -1.0f,
+        1.0f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,  1.0f,  0.0f,
+        0.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  0.0f,  0.0f,  1.0f,
 
-        -1.0f, -1.0f, -1.0f, -1.0f, 0.0f,  0.0f,
-        -1.0f, 1.0f,  -1.0f, -1.0f, 0.0f,  0.0f,
-        -1.0f, 1.0f,  1.0f,  -1.0f, 0.0f,  0.0f,
-        -1.0f, -1.0f, 1.0f,  -1.0f, 0.0f,  0.0f,
+        -1.0f, -1.0f, -1.0f, -1.0f, 0.0f,  0.0f,  -1.0f, 1.0f,
+        -1.0f, -1.0f, 0.0f,  0.0f,  -1.0f, 1.0f,  1.0f,  -1.0f,
+        0.0f,  0.0f,  -1.0f, -1.0f, 1.0f,  -1.0f, 0.0f,  0.0f,
 
-        1.0f,  -1.0f, -1.0f, 1.0f,  0.0f,  0.0f,
-        1.0f,  1.0f,  -1.0f, 1.0f,  0.0f,  0.0f,
-        1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f,
-        1.0f,  -1.0f, 1.0f,  1.0f,  0.0f,  0.0f,
+        1.0f,  -1.0f, -1.0f, 1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
+        -1.0f, 1.0f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,  1.0f,
+        0.0f,  0.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  0.0f,  0.0f,
 
-        -1.0f, -1.0f, -1.0f, 0.0f,  -1.0f, 0.0f,
-        -1.0f, -1.0f, 1.0f,  0.0f,  -1.0f, 0.0f,
-        1.0f,  -1.0f, 1.0f,  0.0f,  -1.0f, 0.0f,
-        1.0f,  -1.0f, -1.0f, 0.0f,  -1.0f, 0.0f,
+        -1.0f, -1.0f, -1.0f, 0.0f,  -1.0f, 0.0f,  -1.0f, -1.0f,
+        1.0f,  0.0f,  -1.0f, 0.0f,  1.0f,  -1.0f, 1.0f,  0.0f,
+        -1.0f, 0.0f,  1.0f,  -1.0f, -1.0f, 0.0f,  -1.0f, 0.0f,
 
-        -1.0f, 1.0f,  -1.0f, 0.0f,  1.0f,  0.0f,
-        -1.0f, 1.0f,  1.0f,  0.0f,  1.0f,  0.0f,
-        1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f,
-        1.0f,  1.0f,  -1.0f, 0.0f,  1.0f,  0.0f,
+        -1.0f, 1.0f,  -1.0f, 0.0f,  1.0f,  0.0f,  -1.0f, 1.0f,
+        1.0f,  0.0f,  1.0f,  0.0f,  1.0f,  1.0f,  1.0f,  0.0f,
+        1.0f,  0.0f,  1.0f,  1.0f,  -1.0f, 0.0f,  1.0f,  0.0f,
     };
 
     static constexpr unsigned int cubeIndices[] = {
-        0,  1,  2,  2,  3,  0,
-        4,  5,  6,  6,  7,  4,
-        8,  9,  10, 10, 11, 8,
-        12, 13, 14, 14, 15, 12,
-        16, 17, 18, 18, 19, 16,
-        20, 21, 22, 22, 23, 20,
+        0,  1,  2,  2,  3,  0,  4,  5,  6,  6,  7,  4,  8,  9,  10, 10, 11, 8,
+        12, 13, 14, 14, 15, 12, 16, 17, 18, 18, 19, 16, 20, 21, 22, 22, 23, 20,
     };
 
     static constexpr char vertexShader[] = R"(
@@ -334,14 +348,18 @@ void main() {
 
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices,
+                 GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices,
+                 GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(0));
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
+                          reinterpret_cast<void *>(0));
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(3 * sizeof(float)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
+                          reinterpret_cast<void *>(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
     float objectColor[3] = {0.25f, 0.75f, 0.95f};
@@ -360,7 +378,9 @@ void main() {
 
     while (running && !windowSystem.shouldClose(windowId)) {
       const std::uint64_t newTicks = SDL_GetPerformanceCounter();
-      const double deltaSeconds = static_cast<double>(newTicks - currentTicks) / static_cast<double>(SDL_GetPerformanceFrequency());
+      const double deltaSeconds =
+          static_cast<double>(newTicks - currentTicks) /
+          static_cast<double>(SDL_GetPerformanceFrequency());
       currentTicks = newTicks;
 
       SDL_Event event;
@@ -369,7 +389,8 @@ void main() {
         if (event.type == SDL_QUIT) {
           running = false;
         }
-        if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE) {
+        if (event.type == SDL_WINDOWEVENT &&
+            event.window.event == SDL_WINDOWEVENT_CLOSE) {
           running = false;
         }
       }
@@ -382,7 +403,8 @@ void main() {
 
       ImGui::Begin("Render Controls");
       ImGui::Text("SDL + OpenGL + ImGui + GLAD");
-      ImGui::SliderFloat("Rotation Speed (deg/s)", &rotationSpeed, 0.0f, 180.0f);
+      ImGui::SliderFloat("Rotation Speed (deg/s)", &rotationSpeed, 0.0f,
+                         180.0f);
       ImGui::ColorEdit3("Object Color", objectColor);
       ImGui::ColorEdit3("Light Color", lightColor);
       ImGui::SliderFloat3("Light Position", lightPos, -5.0f, 5.0f);
@@ -391,7 +413,8 @@ void main() {
       ImGui::SliderFloat("Specular", &specularStrength, 0.0f, 1.5f);
       ImGui::SliderFloat("Shininess", &shininess, 2.0f, 128.0f);
       ImGui::ColorEdit3("Background", clearColor);
-      ImGui::Text("Frame time: %.3f ms", static_cast<float>(deltaSeconds * 1000.0));
+      ImGui::Text("Frame time: %.3f ms",
+                  static_cast<float>(deltaSeconds * 1000.0));
       ImGui::End();
 
       int drawableWidth = 0;
@@ -401,22 +424,36 @@ void main() {
       glClearColor(clearColor[0], clearColor[1], clearColor[2], 1.0f);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-      const float aspect = drawableHeight > 0 ? static_cast<float>(drawableWidth) / static_cast<float>(drawableHeight) : 16.0f / 9.0f;
+      const float aspect = drawableHeight > 0
+                               ? static_cast<float>(drawableWidth) /
+                                     static_cast<float>(drawableHeight)
+                               : 16.0f / 9.0f;
       const Mat4 model = multiply(rotateY(angle), rotateX(angle * 0.5f));
       const Mat4 view = translate(0.0f, 0.0f, -6.0f);
-      const Mat4 projection = perspective(45.0f * 0.0174532925f, aspect, 0.1f, 100.0f);
+      const Mat4 projection =
+          perspective(45.0f * 0.0174532925f, aspect, 0.1f, 100.0f);
 
       glUseProgram(program);
-      glUniformMatrix4fv(glGetUniformLocation(program, "uModel"), 1, GL_FALSE, model.value.data());
-      glUniformMatrix4fv(glGetUniformLocation(program, "uView"), 1, GL_FALSE, view.value.data());
-      glUniformMatrix4fv(glGetUniformLocation(program, "uProjection"), 1, GL_FALSE, projection.value.data());
-      glUniform3f(glGetUniformLocation(program, "uObjectColor"), objectColor[0], objectColor[1], objectColor[2]);
-      glUniform3f(glGetUniformLocation(program, "uLightColor"), lightColor[0], lightColor[1], lightColor[2]);
-      glUniform3f(glGetUniformLocation(program, "uLightPos"), lightPos[0], lightPos[1], lightPos[2]);
-      glUniform3f(glGetUniformLocation(program, "uCameraPos"), 0.0f, 0.0f, 6.0f);
-      glUniform1f(glGetUniformLocation(program, "uAmbientStrength"), ambientStrength);
-      glUniform1f(glGetUniformLocation(program, "uDiffuseStrength"), diffuseStrength);
-      glUniform1f(glGetUniformLocation(program, "uSpecularStrength"), specularStrength);
+      glUniformMatrix4fv(glGetUniformLocation(program, "uModel"), 1, GL_FALSE,
+                         model.value.data());
+      glUniformMatrix4fv(glGetUniformLocation(program, "uView"), 1, GL_FALSE,
+                         view.value.data());
+      glUniformMatrix4fv(glGetUniformLocation(program, "uProjection"), 1,
+                         GL_FALSE, projection.value.data());
+      glUniform3f(glGetUniformLocation(program, "uObjectColor"), objectColor[0],
+                  objectColor[1], objectColor[2]);
+      glUniform3f(glGetUniformLocation(program, "uLightColor"), lightColor[0],
+                  lightColor[1], lightColor[2]);
+      glUniform3f(glGetUniformLocation(program, "uLightPos"), lightPos[0],
+                  lightPos[1], lightPos[2]);
+      glUniform3f(glGetUniformLocation(program, "uCameraPos"), 0.0f, 0.0f,
+                  6.0f);
+      glUniform1f(glGetUniformLocation(program, "uAmbientStrength"),
+                  ambientStrength);
+      glUniform1f(glGetUniformLocation(program, "uDiffuseStrength"),
+                  diffuseStrength);
+      glUniform1f(glGetUniformLocation(program, "uSpecularStrength"),
+                  specularStrength);
       glUniform1f(glGetUniformLocation(program, "uShininess"), shininess);
 
       glBindVertexArray(vao);
@@ -444,7 +481,7 @@ void main() {
     demoModule.onUnload();
 
     return 0;
-  } catch (const std::exception& exception) {
+  } catch (const std::exception &exception) {
     std::cerr << "Fatal error: " << exception.what() << '\n';
     return 1;
   }
