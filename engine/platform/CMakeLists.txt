@@ -1,0 +1,9 @@
+add_library(engine_platform_contract INTERFACE)
+add_library(Engine::platform_contract ALIAS engine_platform_contract)
+target_link_libraries(engine_platform_contract INTERFACE Engine::build_options Engine::warnings Engine::core_contract)
+
+add_library(engine_platform_runtime INTERFACE)
+add_library(Engine::platform_runtime ALIAS engine_platform_runtime)
+target_link_libraries(engine_platform_runtime INTERFACE engine_platform_contract)
+
+install(TARGETS engine_platform_contract engine_platform_runtime EXPORT EngineTargets)
