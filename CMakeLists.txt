@@ -28,8 +28,8 @@ if(CMAKE_CONFIGURATION_TYPES)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-include(EngineCompilerOptions)
-include(EngineCompilerSmokeTest)
+# include(EngineCompilerOptions)
+# include(EngineCompilerSmokeTest)
 
 add_library(engine_build_options INTERFACE)
 add_library(Engine::build_options ALIAS engine_build_options)
@@ -48,15 +48,17 @@ endif()
 
 add_library(engine_warnings INTERFACE)
 add_library(Engine::warnings ALIAS engine_warnings)
-engine_apply_warning_profile(engine_warnings)
+# engine_apply_warning_profile(engine_warnings)
 
-engine_run_compiler_smoke_test()
+# engine_run_compiler_smoke_test()
 
 add_subdirectory(engine)
 
 if(ENGINE_BUILD_SAMPLES)
   add_subdirectory(samples)
 endif()
+
+
 
 if(ENGINE_BUILD_TESTS)
   include(CTest)

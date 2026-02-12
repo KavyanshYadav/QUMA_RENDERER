@@ -14,8 +14,6 @@ function(engine_run_compiler_smoke_test)
     
     
   )
-
-
   if(NOT ENGINE_COMPILER_SMOKE_OK)
     message(FATAL_ERROR "Compiler smoke test failed:\n${ENGINE_COMPILER_SMOKE_LOG}")
   endif()
