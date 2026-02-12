@@ -39,7 +39,7 @@ public:
   [[nodiscard]] IClipboardSystem* clipboardSystem() override { return this; }
 
   [[nodiscard]] WindowId createWindow(const WindowCreateInfo& createInfo) override {
-    std::uint32_t flags = SDL_WINDOW_ALLOW_HIGHDPI;
+    std::uint32_t flags = SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_OPENGL;
     if (createInfo.resizable) {
       flags |= SDL_WINDOW_RESIZABLE;
     }
@@ -83,6 +83,15 @@ public:
     int height = 0;
     SDL_GetWindowSize(it->second, &width, &height);
     return Extent2D{static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height)};
+  }
+
+  [[nodiscard]] void* nativeWindowHandle(WindowId windowId) const override {
+    const auto it = windows_.find(windowId);
+    if (it == windows_.end()) {
+      return nullptr;
+    }
+
+    return it->second;
   }
 
   [[nodiscard]] bool shouldClose(WindowId windowId) const override {
