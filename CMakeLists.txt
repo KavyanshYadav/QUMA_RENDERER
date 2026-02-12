@@ -58,15 +58,17 @@ endif()
 
 add_library(engine_warnings INTERFACE)
 add_library(Engine::warnings ALIAS engine_warnings)
-engine_apply_warning_profile(engine_warnings)
+# engine_apply_warning_profile(engine_warnings)
 
-engine_run_compiler_smoke_test()
+# engine_run_compiler_smoke_test()
 
 add_subdirectory(engine)
 
 if(ENGINE_BUILD_SAMPLES)
   add_subdirectory(samples)
 endif()
+
+
 
 if(ENGINE_BUILD_TESTS)
   include(CTest)

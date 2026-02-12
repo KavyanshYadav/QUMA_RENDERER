@@ -10,7 +10,7 @@ target_link_libraries(
 if(ENGINE_ENABLE_IMGUI)
   engine_resolve_imgui(ENGINE_IMGUI_TARGET)
   if(ENGINE_IMGUI_TARGET)
-    target_link_libraries(engine_devtools_imgui_tools PUBLIC $<BUILD_INTERFACE:${ENGINE_IMGUI_TARGET}>)
+    target_link_libraries(engine_devtools_imgui_tools PUBLIC ${ENGINE_IMGUI_TARGET})
   else()
     message(STATUS "ImGui unavailable: building imgui_tools without ImGui linkage")
   endif()
