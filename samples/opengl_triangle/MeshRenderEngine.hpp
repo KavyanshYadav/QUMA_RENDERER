@@ -70,6 +70,9 @@ private:
 
   SDL_Window* window_ = nullptr;
   unsigned int program_ = 0;
+  unsigned int gizmoProgram_ = 0;
+  unsigned int gizmoVao_ = 0;
+  unsigned int gizmoVbo_ = 0;
   std::vector<GpuMesh> meshes_;
   std::optional<std::uint32_t> hoveredMeshId_;
   std::optional<std::uint32_t> selectedMeshId_;

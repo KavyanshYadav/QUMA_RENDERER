@@ -297,6 +297,32 @@ void main() {
 }
 )";
 
+constexpr const char* kGizmoVertexShader = R"(
+#version 330 core
+layout(location = 0) in vec3 aPosition;
+layout(location = 1) in vec3 aColor;
+
+uniform mat4 uView;
+uniform mat4 uProjection;
+
+out vec3 vColor;
+
+void main() {
+  vColor = aColor;
+  gl_Position = uProjection * uView * vec4(aPosition, 1.0);
+}
+)";
+
+constexpr const char* kGizmoFragmentShader = R"(
+#version 330 core
+in vec3 vColor;
+out vec4 outColor;
+
+void main() {
+  outColor = vec4(vColor, 1.0);
+}
+)";
+
 } // namespace
 
 struct MeshRenderEngine::GpuMesh {
@@ -320,6 +346,16 @@ MeshRenderEngine::MeshRenderEngine(SDL_Window* window)
   }
 
   program_ = createProgram(kVertexShader, kFragmentShader);
+  gizmoProgram_ = createProgram(kGizmoVertexShader, kGizmoFragmentShader);
+  glGenVertexArrays(1, &gizmoVao_);
+  glGenBuffers(1, &gizmoVbo_);
+  glBindVertexArray(gizmoVao_);
+  glBindBuffer(GL_ARRAY_BUFFER, gizmoVbo_);
+  glBufferData(GL_ARRAY_BUFFER, 6 * 6 * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(0));
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
   glEnable(GL_DEPTH_TEST);
 }
 
@@ -336,6 +372,15 @@ MeshRenderEngine::~MeshRenderEngine() {
     }
   }
 
+  if (gizmoVbo_ != 0) {
+    glDeleteBuffers(1, &gizmoVbo_);
+  }
+  if (gizmoVao_ != 0) {
+    glDeleteVertexArrays(1, &gizmoVao_);
+  }
+  if (gizmoProgram_ != 0) {
+    glDeleteProgram(gizmoProgram_);
+  }
   if (program_ != 0) {
     glDeleteProgram(program_);
   }
@@ -518,6 +563,33 @@ void MeshRenderEngine::renderScene(const CameraState& camera, const SceneLightin
 
     glBindVertexArray(mesh.vao);
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.indexCount), GL_UNSIGNED_INT, nullptr);
+  }
+
+  if (selectedMeshId_.has_value()) {
+    const auto selectedIt = std::find_if(meshes_.begin(), meshes_.end(), [this](const GpuMesh& mesh) { return mesh.id == selectedMeshId_.value(); });
+    if (selectedIt != meshes_.end()) {
+      const float originX = selectedIt->position.x;
+      const float originY = selectedIt->position.y;
+      const float originZ = selectedIt->position.z;
+      const float axisLength = 1.15f * selectedIt->scale;
+      const float gizmoVertices[] = {
+          originX, originY, originZ, 1.0f, 0.2f, 0.2f,
+          originX + axisLength, originY, originZ, 1.0f, 0.2f, 0.2f,
+          originX, originY, originZ, 0.2f, 1.0f, 0.2f,
+          originX, originY + axisLength, originZ, 0.2f, 1.0f, 0.2f,
+          originX, originY, originZ, 0.2f, 0.4f, 1.0f,
+          originX, originY, originZ + axisLength, 0.2f, 0.4f, 1.0f,
+      };
+
+      glUseProgram(gizmoProgram_);
+      glUniformMatrix4fv(glGetUniformLocation(gizmoProgram_, "uView"), 1, GL_FALSE, view.value.data());
+      glUniformMatrix4fv(glGetUniformLocation(gizmoProgram_, "uProjection"), 1, GL_FALSE, projection.value.data());
+      glBindVertexArray(gizmoVao_);
+      glBindBuffer(GL_ARRAY_BUFFER, gizmoVbo_);
+      glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(gizmoVertices), gizmoVertices);
+      glLineWidth(3.0f);
+      glDrawArrays(GL_LINES, 0, 6);
+    }
   }
 }
 
