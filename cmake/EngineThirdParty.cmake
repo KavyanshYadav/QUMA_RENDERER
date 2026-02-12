@@ -110,3 +110,52 @@ function(engine_resolve_imgui out_target)
 
   set(${out_target} "${resolved_target}" PARENT_SCOPE)
 endfunction()
+
+function(engine_resolve_glad out_target)
+  set(resolved_target "")
+
+  if(TARGET glad::glad)
+    set(resolved_target "glad::glad")
+  elseif(TARGET glad)
+    set(resolved_target "glad")
+  endif()
+
+  if(NOT resolved_target)
+    find_package(glad QUIET)
+    if(TARGET glad::glad)
+      set(resolved_target "glad::glad")
+    endif()
+  endif()
+
+  if(NOT resolved_target AND WIN32 AND ENGINE_AUTO_FETCH_GLAD)
+    engine_probe_url_access("https://github.com" ENGINE_CAN_ACCESS_GITHUB)
+    if(ENGINE_CAN_ACCESS_GITHUB)
+      message(STATUS "GLAD not found locally, fetching from source for Windows build")
+
+      set(GLAD_INSTALL ON CACHE BOOL "" FORCE)
+      set(GLAD_PROFILE "core" CACHE STRING "" FORCE)
+      set(GLAD_API "gl=3.3" CACHE STRING "" FORCE)
+      set(GLAD_GENERATOR "c" CACHE STRING "" FORCE)
+      set(GLAD_EXTENSIONS "" CACHE STRING "" FORCE)
+
+      FetchContent_Declare(
+        glad
+        GIT_REPOSITORY https://github.com/Dav1dde/glad.git
+        GIT_TAG v0.1.36
+        GIT_SHALLOW TRUE
+      )
+      FetchContent_MakeAvailable(glad)
+
+      if(TARGET glad)
+        add_library(glad::glad ALIAS glad)
+        set(resolved_target "glad::glad")
+      elseif(TARGET glad::glad)
+        set(resolved_target "glad::glad")
+      endif()
+    else()
+      message(STATUS "GLAD auto-fetch requested for Windows but github.com is unreachable")
+    endif()
+  endif()
+
+  set(${out_target} "${resolved_target}" PARENT_SCOPE)
+endfunction()

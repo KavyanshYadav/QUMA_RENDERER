@@ -1,6 +1,6 @@
 #include <SDL.h>
+#include <glad/glad.h>
 
-#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <exception>
@@ -115,6 +115,10 @@ int main(int argc, char** argv) {
 
     if (SDL_GL_MakeCurrent(sdlWindow, glContext) != 0) {
       throw std::runtime_error(std::string{"SDL_GL_MakeCurrent failed: "} + SDL_GetError());
+    }
+
+    if (gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress)) == 0) {
+      throw std::runtime_error("gladLoadGLLoader failed");
     }
 
     auto renderBackend = engine::render::createRenderBackend(engine::render::RenderBackendType::OpenGL);
