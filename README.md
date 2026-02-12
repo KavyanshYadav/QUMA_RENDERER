@@ -43,6 +43,14 @@ ctest --test-dir build
 
 If/when runnable app/sample executables are added, run them from the build output directory (typically under `build/<preset>/bin/`).
 
+
+## Feature flags
+
+- `ENGINE_ENABLE_DEVTOOLS` toggles the `engine/devtools/imgui_tools` package and can be set `OFF` for production builds.
+- `ENGINE_ENABLE_IMGUI` keeps ImGui integration compile definitions available to downstream consumers.
+- `ENGINE_AUTO_FETCH_SDL2` auto-downloads/builds SDL2 from source when SDL2 is missing locally.
+- `ENGINE_AUTO_FETCH_IMGUI` auto-downloads/builds ImGui from source when devtools/ImGui support is enabled.
+
 ## Install
 
 ```bash
