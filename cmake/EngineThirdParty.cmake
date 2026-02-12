@@ -48,6 +48,15 @@ function(engine_resolve_sdl2 out_target)
       elseif(TARGET SDL2-static)
         set(resolved_target "SDL2-static")
       endif()
+
+      # Any SDL2 targets we just fetched and are building must be part of our export set
+      # because our exported engine targets depend on them.
+      if(TARGET SDL2-static)
+        install(TARGETS SDL2-static EXPORT EngineTargets)
+      endif()
+      if(TARGET SDL2)
+        install(TARGETS SDL2 EXPORT EngineTargets)
+      endif()
     else()
       message(STATUS "SDL2 auto-fetch requested but github.com is unreachable; continuing with SDL stub backend")
     endif()
@@ -90,6 +99,8 @@ function(engine_resolve_imgui out_target)
           $<BUILD_INTERFACE:${imgui_SOURCE_DIR}>
           $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
       )
+
+      install(TARGETS engine_thirdparty_imgui EXPORT EngineTargets)
 
       set(resolved_target "imgui::imgui")
     else()
