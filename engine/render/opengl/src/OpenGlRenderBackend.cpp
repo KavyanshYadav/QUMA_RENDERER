@@ -1,6 +1,6 @@
 #include "engine/render/opengl/OpenGlRenderBackend.hpp"
 
-#include <GL/gl.h>
+#include <glad/glad.h>
 
 #include <cstddef>
 #include <cstdint>
