@@ -1,5 +1,14 @@
 #include <SDL.h>
+
+#if __has_include(<glad/glad.h>)
 #include <glad/glad.h>
+#define ENGINE_GLAD_V1 1
+#elif __has_include(<glad/gl.h>)
+#include <glad/gl.h>
+#define ENGINE_GLAD_V1 0
+#else
+#error "GLAD headers not found. Provide third_party/glad or a glad package."
+#endif
 
 #include <cstddef>
 #include <cstdint>
@@ -117,9 +126,15 @@ int main(int argc, char** argv) {
       throw std::runtime_error(std::string{"SDL_GL_MakeCurrent failed: "} + SDL_GetError());
     }
 
+#if ENGINE_GLAD_V1
     if (gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress)) == 0) {
       throw std::runtime_error("gladLoadGLLoader failed");
     }
+#else
+    if (gladLoadGL(reinterpret_cast<GLADloadfunc>(SDL_GL_GetProcAddress)) == 0) {
+      throw std::runtime_error("gladLoadGL failed");
+    }
+#endif
 
     auto renderBackend = engine::render::createRenderBackend(engine::render::RenderBackendType::OpenGL);
     auto renderDevice = renderBackend->createDevice();

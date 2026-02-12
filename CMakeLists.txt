@@ -16,7 +16,7 @@ option(ENGINE_ENABLE_DEVTOOLS "Build developer tooling modules" ON)
 option(ENGINE_ENABLE_PROFILING "Enable profiling instrumentation" OFF)
 option(ENGINE_AUTO_FETCH_SDL2 "Automatically fetch/build SDL2 when not found" ON)
 option(ENGINE_AUTO_FETCH_IMGUI "Automatically fetch/build ImGui for devtools" ON)
-option(ENGINE_AUTO_FETCH_GLAD "Automatically fetch/build GLAD when not found (enabled for Windows workflows)" ON)
+option(ENGINE_AUTO_FETCH_GLAD "Automatically fetch/build GLAD when not found (Windows workflows)" OFF)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")

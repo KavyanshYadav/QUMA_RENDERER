@@ -7,7 +7,8 @@ QumaRenderer is a modular C++20 engine workspace organized into core subsystems 
 - CMake 3.23+
 - A C++20 compiler (GCC/Clang/MSVC)
 - Ninja (recommended; used by the provided CMake presets)
-- On Windows, GLAD is auto-fetched at configure time when missing (`ENGINE_AUTO_FETCH_GLAD=ON`).
+- Preferred: place GLAD under `third_party/glad` and it will be linked automatically.
+- Optional: Windows can auto-fetch GLAD when enabled (`ENGINE_AUTO_FETCH_GLAD=ON`; default `OFF`).
 
 ## Build (manual CMake commands)
 

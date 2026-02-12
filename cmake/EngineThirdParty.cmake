@@ -121,9 +121,54 @@ function(engine_resolve_glad out_target)
   endif()
 
   if(NOT resolved_target)
+    set(glad_include_dir "${CMAKE_SOURCE_DIR}/third_party/glad/include")
+    set(glad_source_file "")
+
+    if(EXISTS "${CMAKE_SOURCE_DIR}/third_party/glad/src/glad.c")
+      set(glad_source_file "${CMAKE_SOURCE_DIR}/third_party/glad/src/glad.c")
+    elseif(EXISTS "${CMAKE_SOURCE_DIR}/third_party/glad/src/gl.c")
+      set(glad_source_file "${CMAKE_SOURCE_DIR}/third_party/glad/src/gl.c")
+    endif()
+
+    if(EXISTS "${glad_include_dir}/glad/glad.h" AND glad_source_file)
+      add_library(engine_thirdparty_glad STATIC "${glad_source_file}")
+      add_library(glad::glad ALIAS engine_thirdparty_glad)
+
+      target_include_directories(
+        engine_thirdparty_glad
+        PUBLIC
+          $<BUILD_INTERFACE:${glad_include_dir}>
+          $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+      )
+
+      install(TARGETS engine_thirdparty_glad EXPORT EngineTargets)
+      install(DIRECTORY "${glad_include_dir}/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+
+      set(resolved_target "glad::glad")
+    elseif(EXISTS "${glad_include_dir}/glad/gl.h" AND glad_source_file)
+      add_library(engine_thirdparty_glad STATIC "${glad_source_file}")
+      add_library(glad::glad ALIAS engine_thirdparty_glad)
+
+      target_include_directories(
+        engine_thirdparty_glad
+        PUBLIC
+          $<BUILD_INTERFACE:${glad_include_dir}>
+          $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+      )
+
+      install(TARGETS engine_thirdparty_glad EXPORT EngineTargets)
+      install(DIRECTORY "${glad_include_dir}/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+
+      set(resolved_target "glad::glad")
+    endif()
+  endif()
+
+  if(NOT resolved_target)
     find_package(glad QUIET)
     if(TARGET glad::glad)
       set(resolved_target "glad::glad")
+    elseif(TARGET glad)
+      set(resolved_target "glad")
     endif()
   endif()
 
@@ -144,7 +189,6 @@ function(engine_resolve_glad out_target)
         GIT_TAG v0.1.36
         GIT_SHALLOW TRUE
       )
-      set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
       FetchContent_MakeAvailable(glad)
 
       if(TARGET glad)
