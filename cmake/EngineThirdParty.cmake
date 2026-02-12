@@ -144,6 +144,7 @@ function(engine_resolve_glad out_target)
         GIT_TAG v0.1.36
         GIT_SHALLOW TRUE
       )
+      set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
       FetchContent_MakeAvailable(glad)
 
       if(TARGET glad)
