@@ -7,6 +7,8 @@ QumaRenderer is a modular C++20 engine workspace organized into core subsystems 
 - CMake 3.23+
 - A C++20 compiler (GCC/Clang/MSVC)
 - Ninja (recommended; used by the provided CMake presets)
+- Preferred: place GLAD under `third_party/glad` and it will be linked automatically.
+- Optional: Windows can auto-fetch GLAD when enabled (`ENGINE_AUTO_FETCH_GLAD=ON`; default `OFF`).
 
 ## Build (manual CMake commands)
 
@@ -33,7 +35,21 @@ cmake --build --preset linux-clang-debug
 
 ## Run
 
-This repository currently builds engine libraries (and optional bundle/interface targets), not a standalone runtime executable yet.
+This repository now includes a runnable sample executable:
+
+- `engine_sample_opengl_triangle`: validates platform + module + OpenGL render path by opening a window and drawing a triangle.
+
+Run it from the build output directory:
+
+```bash
+./build/linux-gcc-debug/bin/engine_sample_opengl_triangle --frames=600
+```
+
+For headless/CI smoke checks, run only a few frames:
+
+```bash
+./build/linux-gcc-debug/bin/engine_sample_opengl_triangle --frames=1
+```
 
 You can still run the project validation flow after building:
 

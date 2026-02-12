@@ -13,13 +13,14 @@ target_include_directories(
 )
 
 find_package(OpenGL QUIET)
+engine_resolve_glad(ENGINE_GLAD_TARGET)
 
-if(OpenGL_FOUND)
+if(OpenGL_FOUND AND ENGINE_GLAD_TARGET)
   target_sources(engine_render_backend_opengl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/OpenGlRenderBackend.cpp)
-  target_link_libraries(engine_render_backend_opengl PRIVATE OpenGL::GL)
+  target_link_libraries(engine_render_backend_opengl PRIVATE OpenGL::GL ${ENGINE_GLAD_TARGET})
   set(ENGINE_RENDER_HAS_OPENGL ON PARENT_SCOPE)
 else()
-  message(STATUS "OpenGL not found: engine_render_backend_opengl will be a stub target")
+  message(STATUS "OpenGL and/or GLAD not found: engine_render_backend_opengl will be a stub target")
 endif()
 
 install(TARGETS engine_render_backend_opengl EXPORT EngineTargets)

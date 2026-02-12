@@ -110,3 +110,97 @@ function(engine_resolve_imgui out_target)
 
   set(${out_target} "${resolved_target}" PARENT_SCOPE)
 endfunction()
+
+function(engine_resolve_glad out_target)
+  set(resolved_target "")
+
+  if(TARGET glad::glad)
+    set(resolved_target "glad::glad")
+  elseif(TARGET glad)
+    set(resolved_target "glad")
+  endif()
+
+  if(NOT resolved_target)
+    set(glad_include_dir "${CMAKE_SOURCE_DIR}/third_party/glad/include")
+    set(glad_source_file "")
+
+    if(EXISTS "${CMAKE_SOURCE_DIR}/third_party/glad/src/glad.c")
+      set(glad_source_file "${CMAKE_SOURCE_DIR}/third_party/glad/src/glad.c")
+    elseif(EXISTS "${CMAKE_SOURCE_DIR}/third_party/glad/src/gl.c")
+      set(glad_source_file "${CMAKE_SOURCE_DIR}/third_party/glad/src/gl.c")
+    endif()
+
+    if(EXISTS "${glad_include_dir}/glad/glad.h" AND glad_source_file)
+      add_library(engine_thirdparty_glad STATIC "${glad_source_file}")
+      add_library(glad::glad ALIAS engine_thirdparty_glad)
+
+      target_include_directories(
+        engine_thirdparty_glad
+        PUBLIC
+          $<BUILD_INTERFACE:${glad_include_dir}>
+          $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+      )
+
+      install(TARGETS engine_thirdparty_glad EXPORT EngineTargets)
+      install(DIRECTORY "${glad_include_dir}/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+
+      set(resolved_target "glad::glad")
+    elseif(EXISTS "${glad_include_dir}/glad/gl.h" AND glad_source_file)
+      add_library(engine_thirdparty_glad STATIC "${glad_source_file}")
+      add_library(glad::glad ALIAS engine_thirdparty_glad)
+
+      target_include_directories(
+        engine_thirdparty_glad
+        PUBLIC
+          $<BUILD_INTERFACE:${glad_include_dir}>
+          $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+      )
+
+      install(TARGETS engine_thirdparty_glad EXPORT EngineTargets)
+      install(DIRECTORY "${glad_include_dir}/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+
+      set(resolved_target "glad::glad")
+    endif()
+  endif()
+
+  if(NOT resolved_target)
+    find_package(glad QUIET)
+    if(TARGET glad::glad)
+      set(resolved_target "glad::glad")
+    elseif(TARGET glad)
+      set(resolved_target "glad")
+    endif()
+  endif()
+
+  if(NOT resolved_target AND WIN32 AND ENGINE_AUTO_FETCH_GLAD)
+    engine_probe_url_access("https://github.com" ENGINE_CAN_ACCESS_GITHUB)
+    if(ENGINE_CAN_ACCESS_GITHUB)
+      message(STATUS "GLAD not found locally, fetching from source for Windows build")
+
+      set(GLAD_INSTALL ON CACHE BOOL "" FORCE)
+      set(GLAD_PROFILE "core" CACHE STRING "" FORCE)
+      set(GLAD_API "gl=3.3" CACHE STRING "" FORCE)
+      set(GLAD_GENERATOR "c" CACHE STRING "" FORCE)
+      set(GLAD_EXTENSIONS "" CACHE STRING "" FORCE)
+
+      FetchContent_Declare(
+        glad
+        GIT_REPOSITORY https://github.com/Dav1dde/glad.git
+        GIT_TAG v0.1.36
+        GIT_SHALLOW TRUE
+      )
+      FetchContent_MakeAvailable(glad)
+
+      if(TARGET glad)
+        add_library(glad::glad ALIAS glad)
+        set(resolved_target "glad::glad")
+      elseif(TARGET glad::glad)
+        set(resolved_target "glad::glad")
+      endif()
+    else()
+      message(STATUS "GLAD auto-fetch requested for Windows but github.com is unreachable")
+    endif()
+  endif()
+
+  set(${out_target} "${resolved_target}" PARENT_SCOPE)
+endfunction()

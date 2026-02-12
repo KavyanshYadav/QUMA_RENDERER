@@ -14,6 +14,7 @@ public:
   virtual void destroyWindow(WindowId windowId) = 0;
 
   [[nodiscard]] virtual std::optional<Extent2D> framebufferExtent(WindowId windowId) const = 0;
+  [[nodiscard]] virtual void* nativeWindowHandle(WindowId windowId) const = 0;
   [[nodiscard]] virtual bool shouldClose(WindowId windowId) const = 0;
 
   virtual void pollEvents(PlatformEventQueue& eventQueue) = 0;

@@ -1,6 +1,12 @@
 #include "engine/render/opengl/OpenGlRenderBackend.hpp"
 
-#include <GL/gl.h>
+#if __has_include(<glad/glad.h>)
+#include <glad/glad.h>
+#elif __has_include(<glad/gl.h>)
+#include <glad/gl.h>
+#else
+#error "GLAD headers not found. Provide third_party/glad or a glad package."
+#endif
 
 #include <cstddef>
 #include <cstdint>

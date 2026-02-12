@@ -9,4 +9,27 @@ target_link_libraries(
     Engine::modules_runtime
 )
 
+engine_resolve_sdl2(ENGINE_SAMPLES_SDL2_TARGET)
+engine_resolve_glad(ENGINE_GLAD_TARGET)
+find_package(OpenGL QUIET)
+
+if(ENGINE_SAMPLES_SDL2_TARGET AND OpenGL_FOUND AND ENGINE_GLAD_TARGET)
+  add_executable(engine_sample_opengl_triangle
+    ${CMAKE_CURRENT_SOURCE_DIR}/opengl_triangle/main.cpp
+  )
+
+  target_link_libraries(
+    engine_sample_opengl_triangle
+    PRIVATE
+      Engine::samples_bundle
+      ${ENGINE_SAMPLES_SDL2_TARGET}
+      ${ENGINE_GLAD_TARGET}
+      OpenGL::GL
+  )
+
+  target_compile_features(engine_sample_opengl_triangle PRIVATE cxx_std_20)
+else()
+  message(STATUS "Skipping engine_sample_opengl_triangle: SDL2, OpenGL, and/or GLAD not available")
+endif()
+
 install(TARGETS engine_samples_bundle EXPORT EngineTargets)
