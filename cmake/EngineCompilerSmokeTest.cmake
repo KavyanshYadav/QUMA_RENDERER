@@ -11,7 +11,10 @@ function(engine_run_compiler_smoke_test)
     "${smoke_source}"
     CMAKE_FLAGS "-DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}"
     OUTPUT_VARIABLE ENGINE_COMPILER_SMOKE_LOG
+    
+    
   )
+
 
   if(NOT ENGINE_COMPILER_SMOKE_OK)
     message(FATAL_ERROR "Compiler smoke test failed:\n${ENGINE_COMPILER_SMOKE_LOG}")
