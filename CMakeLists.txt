@@ -31,8 +31,9 @@ if(CMAKE_CONFIGURATION_TYPES)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-# include(EngineCompilerOptions)
-# include(EngineCompilerSmokeTest)
+include(EngineCompilerOptions)
+include(EngineCompilerSmokeTest)
+include(EngineThirdParty)
 
 add_library(engine_build_options INTERFACE)
 add_library(Engine::build_options ALIAS engine_build_options)
