@@ -2,8 +2,9 @@
 
 ## Scope
 Rendering contracts and backends:
-- renderer API abstraction (device, swapchain, command submission)
-- render graph or pipeline orchestration contracts
+- renderer API abstraction (`IRenderBackend`, `IRenderDevice`, `ICommandContext`)
+- frame graph extension hooks (`IFrameGraphHook`)
+- backend/resource handles for buffers, textures, shaders, and pipelines
 - concrete backend implementation, starting with OpenGL
 
 ## Ownership
@@ -12,8 +13,13 @@ Rendering contracts and backends:
 
 ## Extension points
 - Add rendering features behind backend-neutral interfaces before backend specialization.
-- Place OpenGL-specific code in a dedicated backend area and keep generic API clean.
-- Future backends (e.g., Vulkan/Metal/D3D) should implement the same core contracts.
+- Keep backend-specific headers (OpenGL/Vulkan/DirectX) isolated under backend folders.
+- Select backend through `RenderBackendFactory` + `--render-backend=<name>` to avoid core rewrites when adding new APIs.
+
+## Current structure
+- Public render contracts live under `engine/render/include/engine/render/`.
+- OpenGL backend code is isolated under `engine/render/opengl/`; only the backend implementation sees OpenGL headers.
+- Runtime backend creation is centralized in `createRenderBackend(...)`, with configuration/CLI selection via `selectRenderBackendType(...)`.
 
 ## Parallel-work rules
 - Avoid leaking OpenGL types into public renderer interfaces.
