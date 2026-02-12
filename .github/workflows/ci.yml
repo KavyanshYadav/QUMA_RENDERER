@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  formatting-and-lint:
+    name: Formatting and lint gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format cmake ninja-build
+
+      - name: Verify CMake configure (lint gate)
+        run: cmake -S . -B build/lint -G Ninja
+
+      - name: Verify C/C++ formatting
+        run: |
+          files=$(rg --files -g '*.h' -g '*.hpp' -g '*.c' -g '*.cpp')
+          if [ -n "$files" ]; then
+            echo "$files" | xargs clang-format --dry-run --Werror
+          fi
+
+  build-matrix:
+    name: Build and test (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-gcc
+            os: ubuntu-latest
+            configure: cmake -S . -B build/linux-gcc -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+            build: cmake --build build/linux-gcc
+            test: ctest --test-dir build/linux-gcc --output-on-failure
+          - name: linux-clang
+            os: ubuntu-latest
+            configure: cmake -S . -B build/linux-clang -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+            build: cmake --build build/linux-clang
+            test: ctest --test-dir build/linux-clang --output-on-failure
+          - name: windows-msvc
+            os: windows-latest
+            configure: cmake -S . -B build/windows-msvc -G "Ninja Multi-Config" -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
+            build: cmake --build build/windows-msvc --config Debug
+            test: ctest --test-dir build/windows-msvc -C Debug --output-on-failure
+          - name: windows-mingw
+            os: windows-latest
+            msys2: true
+            configure: cmake -S . -B build/windows-mingw -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+            build: cmake --build build/windows-mingw
+            test: ctest --test-dir build/windows-mingw --output-on-failure
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Ninja
+        if: runner.os != 'Windows'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Setup MSVC environment
+        if: matrix.name == 'windows-msvc'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Setup MSYS2 (MinGW)
+        if: matrix.msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+
+      - name: Configure (default shell)
+        if: runner.os != 'Windows' || !matrix.msys2
+        run: ${{ matrix.configure }}
+
+      - name: Build (default shell)
+        if: runner.os != 'Windows' || !matrix.msys2
+        run: ${{ matrix.build }}
+
+      - name: Test (default shell)
+        if: runner.os != 'Windows' || !matrix.msys2
+        run: ${{ matrix.test }}
+
+      - name: Configure (MSYS2)
+        if: matrix.msys2
+        shell: msys2 {0}
+        run: ${{ matrix.configure }}
+
+      - name: Build (MSYS2)
+        if: matrix.msys2
+        shell: msys2 {0}
+        run: ${{ matrix.build }}
+
+      - name: Test (MSYS2)
+        if: matrix.msys2
+        shell: msys2 {0}
+        run: ${{ matrix.test }}
