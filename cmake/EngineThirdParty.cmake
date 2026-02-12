@@ -179,7 +179,7 @@ function(engine_resolve_glad out_target)
 
       set(GLAD_INSTALL ON CACHE BOOL "" FORCE)
       set(GLAD_PROFILE "core" CACHE STRING "" FORCE)
-      set(GLAD_API "gl=3.3" CACHE STRING "" FORCE)
+      set(GLAD_API "gl=4.6" CACHE STRING "" FORCE)
       set(GLAD_GENERATOR "c" CACHE STRING "" FORCE)
       set(GLAD_EXTENSIONS "" CACHE STRING "" FORCE)
 
@@ -189,6 +189,7 @@ function(engine_resolve_glad out_target)
         GIT_TAG v0.1.36
         GIT_SHALLOW TRUE
       )
+      set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
       FetchContent_MakeAvailable(glad)
 
       if(TARGET glad)
